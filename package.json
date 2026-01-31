@@ -6,9 +6,13 @@
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.1",
     "astro": "^5.16.9"
   },
   "dependencies": {
