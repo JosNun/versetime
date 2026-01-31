@@ -13,7 +13,7 @@ test.describe("Translation Selector", () => {
   test("translation selector is present with ESV and NIV options", async ({
     page,
   }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.getByLabel("Translation");
     await expect(translationSelect).toBeVisible();
 
     // Check that both options exist
@@ -26,18 +26,18 @@ test.describe("Translation Selector", () => {
   });
 
   test("translation selector defaults to ESV", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.getByLabel("Translation");
     await expect(translationSelect).toHaveValue("ESV");
   });
 
   test("can switch translation to NIV", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.getByLabel("Translation");
     await translationSelect.selectOption("NIV");
     await expect(translationSelect).toHaveValue("NIV");
   });
 
   test("can switch translation back to ESV", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.getByLabel("Translation");
 
     // Switch to NIV first
     await translationSelect.selectOption("NIV");
@@ -55,7 +55,7 @@ test.describe("Copyright Notice", () => {
   });
 
   test("shows ESV copyright when ESV is selected", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.getByLabel("Translation");
     await translationSelect.selectOption("ESV");
 
     const copyrightText = page.locator("text=Crossway");
@@ -63,7 +63,7 @@ test.describe("Copyright Notice", () => {
   });
 
   test("shows NIV copyright when NIV is selected", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.getByLabel("Translation");
     await translationSelect.selectOption("NIV");
 
     const copyrightText = page.locator("text=Biblica");
@@ -71,7 +71,7 @@ test.describe("Copyright Notice", () => {
   });
 
   test("copyright changes when translation is switched", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.getByLabel("Translation");
 
     // Start with ESV
     await translationSelect.selectOption("ESV");
@@ -105,7 +105,7 @@ test.describe("Verse Fetching with ESV", () => {
     await page.goto("/");
 
     // Ensure ESV is selected
-    const translationSelect = page.locator("select");
+    const translationSelect = page.getByLabel("Translation");
     await translationSelect.selectOption("ESV");
 
     // Enter reference
@@ -144,7 +144,7 @@ test.describe("Verse Fetching with NIV", () => {
     await page.goto("/");
 
     // Select NIV
-    const translationSelect = page.locator("select");
+    const translationSelect = page.getByLabel("Translation");
     await translationSelect.selectOption("NIV");
 
     // Enter reference
@@ -195,7 +195,7 @@ test.describe("Verse Fetching with NIV", () => {
     await page.goto("/");
 
     // Select NIV
-    const translationSelect = page.locator("select");
+    const translationSelect = page.getByLabel("Translation");
     await translationSelect.selectOption("NIV");
 
     // Enter verse range
@@ -258,7 +258,7 @@ test.describe("UI Layout", () => {
     await page.goto("/");
 
     // Get the bounding boxes to verify order
-    const translationSelect = page.locator("select");
+    const translationSelect = page.getByLabel("Translation");
     const referenceInput = page.locator('input[placeholder*="John 3:16"]');
 
     const selectBox = await translationSelect.boundingBox();
