@@ -13,7 +13,7 @@ test.describe("Translation Selector", () => {
   test("translation selector is present with ESV and NIV options", async ({
     page,
   }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.locator("select").first();
     await expect(translationSelect).toBeVisible();
 
     // Check that both options exist
@@ -26,18 +26,18 @@ test.describe("Translation Selector", () => {
   });
 
   test("translation selector defaults to ESV", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.locator("select").first();
     await expect(translationSelect).toHaveValue("ESV");
   });
 
   test("can switch translation to NIV", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.locator("select").first();
     await translationSelect.selectOption("NIV");
     await expect(translationSelect).toHaveValue("NIV");
   });
 
   test("can switch translation back to ESV", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.locator("select").first();
 
     // Switch to NIV first
     await translationSelect.selectOption("NIV");
@@ -55,7 +55,7 @@ test.describe("Copyright Notice", () => {
   });
 
   test("shows ESV copyright when ESV is selected", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.locator("select").first();
     await translationSelect.selectOption("ESV");
 
     const copyrightText = page.locator("text=Crossway");
@@ -63,7 +63,7 @@ test.describe("Copyright Notice", () => {
   });
 
   test("shows NIV copyright when NIV is selected", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.locator("select").first();
     await translationSelect.selectOption("NIV");
 
     const copyrightText = page.locator("text=Biblica");
@@ -71,7 +71,7 @@ test.describe("Copyright Notice", () => {
   });
 
   test("copyright changes when translation is switched", async ({ page }) => {
-    const translationSelect = page.locator("select");
+    const translationSelect = page.locator("select").first();
 
     // Start with ESV
     await translationSelect.selectOption("ESV");
@@ -105,7 +105,7 @@ test.describe("Verse Fetching with ESV", () => {
     await page.goto("/");
 
     // Ensure ESV is selected
-    const translationSelect = page.locator("select");
+    const translationSelect = page.locator("select").first();
     await translationSelect.selectOption("ESV");
 
     // Enter reference
@@ -125,26 +125,25 @@ test.describe("Verse Fetching with ESV", () => {
 
 test.describe("Verse Fetching with NIV", () => {
   test("fetches verse from bolls.life API", async ({ page }) => {
-    // Mock the bolls.life API response
+    // Mock the bolls.life API response for chapter data
     await page.route("**/bolls.life/get-text/**", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          pk: 123,
-          translation: "NIV",
-          book: 43,
-          chapter: 3,
-          verse: 16,
-          text: "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
-        }),
+        body: JSON.stringify([
+          {
+            pk: 123,
+            verse: 16,
+            text: "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
+          },
+        ]),
       });
     });
 
     await page.goto("/");
 
     // Select NIV
-    const translationSelect = page.locator("select");
+    const translationSelect = page.locator("select").first();
     await translationSelect.selectOption("NIV");
 
     // Enter reference
@@ -164,38 +163,32 @@ test.describe("Verse Fetching with NIV", () => {
   test("fetches verse range from bolls.life API", async ({ page }) => {
     let requestCount = 0;
 
-    // Mock the bolls.life API response for multiple verses
+    // Mock the bolls.life API response for chapter data
     await page.route("**/bolls.life/get-text/**", async (route) => {
       requestCount++;
-      const url = route.request().url();
-
-      // Parse verse number from URL
-      const verseMatch = url.match(/\/(\d+)\/$/);
-      const verse = verseMatch ? parseInt(verseMatch[1]) : 16;
-
-      const verses: Record<number, string> = {
-        16: "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
-        17: "For God did not send his Son into the world to condemn the world, but to save the world through him.",
-      };
 
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          pk: 100 + verse,
-          translation: "NIV",
-          book: 43,
-          chapter: 3,
-          verse: verse,
-          text: verses[verse] || "Test verse",
-        }),
+        body: JSON.stringify([
+          {
+            pk: 116,
+            verse: 16,
+            text: "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
+          },
+          {
+            pk: 117,
+            verse: 17,
+            text: "For God did not send his Son into the world to condemn the world, but to save the world through him.",
+          },
+        ]),
       });
     });
 
     await page.goto("/");
 
     // Select NIV
-    const translationSelect = page.locator("select");
+    const translationSelect = page.locator("select").first();
     await translationSelect.selectOption("NIV");
 
     // Enter verse range
@@ -214,8 +207,8 @@ test.describe("Verse Fetching with NIV", () => {
       page.locator("text=condemn the world")
     ).toBeVisible({ timeout: 5000 });
 
-    // Verify that 2 API requests were made (one per verse)
-    expect(requestCount).toBe(2);
+    // Verify that 1 API request was made (one for the entire chapter)
+    expect(requestCount).toBe(1);
   });
 });
 
@@ -258,7 +251,7 @@ test.describe("UI Layout", () => {
     await page.goto("/");
 
     // Get the bounding boxes to verify order
-    const translationSelect = page.locator("select");
+    const translationSelect = page.locator("select").first();
     const referenceInput = page.locator('input[placeholder*="John 3:16"]');
 
     const selectBox = await translationSelect.boundingBox();

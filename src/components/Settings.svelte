@@ -121,6 +121,25 @@
     };
   }
 
+  function cleanVerseText(rawText: string): string {
+    let cleaned = rawText;
+    
+    // Remove section headers that end with <br/> or <br>
+    // Headers are typically title-case words at the beginning followed by <br/>
+    cleaned = cleaned.replace(/^[A-Z][A-Za-z\s,'-]*<br\s*\/?>/i, "");
+    
+    // If still has <br/>, take the part after the last <br/>
+    if (cleaned.includes("<br")) {
+      const parts = cleaned.split(/<br\s*\/?>/i);
+      cleaned = parts[parts.length - 1];
+    }
+    
+    // Remove all remaining HTML tags
+    cleaned = cleaned.replace(/<[^>]*>/g, "");
+    
+    return cleaned.trim();
+  }
+
   async function fetchFromBolls(translation: string): Promise<{ reference: string; text: string }> {
     const parsed = parseReference(reference);
     if (!parsed) {
@@ -130,15 +149,20 @@
     const { bookId, chapter, verseStart, verseEnd } = parsed;
     const verses: string[] = [];
 
-    // Fetch each verse in the range
+    // Fetch the entire chapter once
+    const res = await fetch(
+      `https://bolls.life/get-text/${translation}/${bookId}/${chapter}/`
+    );
+    const chapterData = await res.json() as Array<{ verse: number; text: string }>;
+    
+    // Extract the specific verses from the chapter
     for (let verse = verseStart; verse <= verseEnd; verse++) {
-      const res = await fetch(
-        `https://bolls.life/get-text/${translation}/${bookId}/${chapter}/${verse}/`
-      );
-      const data = await res.json() as { text: string };
-      // Remove HTML tags from the text
-      const cleanText = data.text.replace(/<[^>]*>/g, "").trim();
-      verses.push(cleanText);
+      const verseData = chapterData.find(v => v.verse === verse);
+      if (verseData) {
+        // Clean the verse text to remove headers and HTML
+        const cleanText = cleanVerseText(verseData.text);
+        verses.push(cleanText);
+      }
     }
 
     return {
