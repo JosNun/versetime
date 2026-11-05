@@ -1,5 +1,6 @@
 <script lang="ts">
   import { settings } from "../stores";
+  import AnimatedWord from "./AnimatedWord.svelte";
   $: text = $settings.passage.text;
   $: reference = $settings.passage.reference;
   let changeTimeout;
@@ -19,6 +20,9 @@
   // Double-tap detection
   let lastTapTime: Map<number, number> = new Map();
   const DOUBLE_TAP_THRESHOLD = 400; // ms
+
+  // Word components, for playing destroy effects and restoring
+  let animatedWordRefs: { [key: number]: any } = {};
 
   $: getShownLetters = (wordGroups) => {
     const letters = new Array(
@@ -78,6 +82,7 @@
     hiddenWords = new Set();
     allRevealed = false;
     lastTapTime = new Map();
+    animatedWordRefs = {};
   };
 
   $: init = () => {
@@ -151,26 +156,28 @@
     }
   }
 
-  function handleWordTap(wordIndex: number, event: MouseEvent | TouchEvent) {
+  async function handleWordTap(wordIndex: number) {
     if (!allRevealed) return;
 
     const now = Date.now();
     const lastTap = lastTapTime.get(wordIndex) || 0;
+    lastTapTime.set(wordIndex, now);
+    const word = animatedWordRefs[wordIndex];
 
     if (hiddenWords.has(wordIndex)) {
-      // Word is hidden - check for double-tap to restore
+      // Word is hidden - double-tap to restore
       if (now - lastTap < DOUBLE_TAP_THRESHOLD) {
+        word?.restore();
         hiddenWords.delete(wordIndex);
         hiddenWords = hiddenWords; // Trigger reactivity
         lastTapTime.delete(wordIndex);
-      } else {
-        lastTapTime.set(wordIndex, now);
       }
     } else {
-      // Word is visible - single tap to hide
+      // Word is visible - single tap plays a random destroy effect, then it stays hidden
+      await word?.destroy();
       hiddenWords.add(wordIndex);
       hiddenWords = hiddenWords; // Trigger reactivity
-      lastTapTime.set(wordIndex, now);
+      lastTapTime.delete(wordIndex); // restoring needs a fresh double-tap
     }
   }
 </script>
@@ -180,36 +187,17 @@
     {#each wordGroups as group, groupIndex}
       {#key group.letters + groupIndex}
         {#if group.isReferenceStart}
-          <div class="w-full" />
+          <div class="w-full"></div>
         {/if}
-        <span
-          class="flex space-x-1 {group.isReferenceStart ? 'ml-auto' : ''} {allRevealed ? 'cursor-pointer select-none' : ''}"
-          on:click={(e) => handleWordTap(groupIndex, e)}
-          on:touchend|preventDefault={(e) => handleWordTap(groupIndex, e)}
-          role="button"
-          tabindex={allRevealed ? 0 : -1}
-        >
-          {#each group.letters.split("") as letter, letterIndex}
-            {@const isSymbol = !wordRegex.test(letter)}
-            {@const isWordHidden = hiddenWords.has(groupIndex)}
-            <div
-              class="w-7 uppercase text-center {!isSymbol
-                ? 'border-b-2 border-gray-300 '
-                : ''} font-semibold text-gray-700"
-            >
-              <div
-                class="transition-all duration-500 ease-out
-                  {!isSymbol && !shownLetters[group.offset + letterIndex]
-                    ? 'opacity-0 -translate-y-2 scale-75'
-                    : !isSymbol && isWordHidden
-                      ? 'opacity-0 scale-0 rotate-180 blur-sm'
-                      : 'opacity-100 scale-100 rotate-0 blur-0'}"
-              >
-                {letter}
-              </div>
-            </div>
-          {/each}
-        </span>
+        <AnimatedWord
+          bind:this={animatedWordRefs[groupIndex]}
+          letters={group.letters}
+          shown={shownLetters.slice(group.offset, group.offset + group.letters.length)}
+          hidden={hiddenWords.has(groupIndex)}
+          canInteract={allRevealed}
+          on:tap={() => handleWordTap(groupIndex)}
+          class={group.isReferenceStart ? "ml-auto" : ""}
+        />
       {/key}
     {/each}
   </div>
