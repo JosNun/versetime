@@ -47,10 +47,28 @@ test.describe("Verse Fetching with ESV", () => {
     const fetchButton = page.locator('button:has-text("Fetch")');
     await fetchButton.click();
 
-    // Wait for the verse text to appear
-    await expect(
-      page.locator("text=For God so loved the world")
-    ).toBeVisible({ timeout: 5000 });
+    // The sidebar previews the fetched verse right away
+    const preview = page.getByTestId("verse-preview");
+    await expect(preview).toContainText("John 3:16", { timeout: 5000 });
+    await expect(preview).toContainText("For God so loved the world");
+  });
+
+  test("shows a message when the reference isn't found", async ({ page }) => {
+    await page.route("**/api.esv.org/**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ canonical: "", query: "Hezekiah 1:1", passages: [] }),
+      });
+    });
+
+    await page.goto("/");
+
+    await page.locator('input[placeholder*="John 3:16"]').fill("Hezekiah 1:1");
+    await page.locator('button:has-text("Fetch")').click();
+
+    await expect(page.getByRole("alert")).toContainText("Hezekiah 1:1");
+    await expect(page.getByTestId("verse-preview")).toHaveCount(0);
   });
 });
 

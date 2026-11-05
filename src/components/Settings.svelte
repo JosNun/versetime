@@ -4,6 +4,8 @@
 
   let isOpen = true;
   let reference = "";
+  let fetching = false;
+  let fetchError = "";
 
   const inputHour = $settings.endTime.getHours().toString().padStart(2, "0");
   const inputMinute = $settings.endTime
@@ -36,8 +38,15 @@
   }
 
   async function fetchReference() {
+    fetching = true;
+    fetchError = "";
     try {
       const result = await fetchFromESV();
+
+      if (!result.text) {
+        fetchError = `Couldn't find "${reference}". Check the spelling and try again.`;
+        return;
+      }
 
       settings.update((settings) => ({
         ...settings,
@@ -48,7 +57,9 @@
       }));
     } catch (error) {
       console.error("Failed to fetch verse:", error);
-      alert(error instanceof Error ? error.message : "Failed to fetch verse");
+      fetchError = "Couldn't fetch that verse. Please try again.";
+    } finally {
+      fetching = false;
     }
   }
 
@@ -120,11 +131,25 @@
             bind:value={reference}
           />
           <button
-            class="hover:bg-gray-300 transition px-2 py-1 rounded"
-            type="submit">Fetch</button
+            class="hover:bg-gray-300 transition px-2 py-1 rounded disabled:opacity-50"
+            type="submit"
+            disabled={fetching}>{fetching ? "Fetching…" : "Fetch"}</button
           >
         </div>
       </form>
+
+      {#if fetchError}
+        <div class="text-sm text-red-700" role="alert">{fetchError}</div>
+      {:else if $settings.passage.text}
+        <div data-testid="verse-preview" class="bg-white rounded px-4 py-3">
+          <div class="font-bold text-sm text-gray-600">
+            {$settings.passage.reference}
+          </div>
+          <p class="text-gray-700 mt-1 leading-relaxed">
+            {$settings.passage.text}
+          </p>
+        </div>
+      {/if}
     </div>
     <div class="text-xs text-gray-600 mt-auto px-4 py-2">
       Scripture quotations are from The ESV® Bible (The Holy Bible, English
